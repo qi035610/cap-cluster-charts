@@ -1,0 +1,55 @@
+# Default values for ecs-cp.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+ecs-server: {}
+
+clusterName:       
+endpointIP:
+version: v1.29.6
+
+controlPlane:
+  replicas: 1
+  numCPUs: 4   # cores
+  diskGiB: 100 # GB
+  memoryMiB: 8192 #MB
+  os: Linux
+  powerOffMode: trySoft
+  cloneMode: linkedClone
+  datacenter: Datacenter
+  storagePolicyName: ""
+  network:
+    devices:
+    - dhcp4: true
+      networkName: 
+  resourcePool: 
+  template: 
+  datastore: 
+worker:
+  replicas: 1
+  numCPUs: 4   # cores
+  diskGiB: 100 # GB
+  memoryMiB: 8192 #MB
+  os: Linux
+  powerOffMode: trySoft
+  cloneMode: linkedClone
+  datacenter: Datacenter
+  storagePolicyName: ""
+  network:
+    devices:
+    - dhcp4: true
+      networkName: 
+  resourcePool: 
+  template: 
+  datastore: 
+
+cloudInit: # user data
+  sshAuthorizedKeys: []
+
+vsphere:
+  server: 
+  username:
+  password:
+  thumbprint: 
+
+nameOverride: ""
+fullnameOverride: ""
