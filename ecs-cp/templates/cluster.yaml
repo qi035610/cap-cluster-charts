@@ -1,19 +1,19 @@
 {{/*
 List all required inputs in values.yaml
 */}}
-{{- $_ := ".clusterName should be set" .Values.clusterName -}}
-{{- $_ := ".endpointIP should be set" .Values.endpointIP -}}
-{{- $_ := ".version should be set" .Values.version -}}
-{{- $_ := ".vsphere.server should be set" .Values.vsphere.server -}}
-{{- $_ := ".vsphere.username should be set" .Values.vsphere.username -}}
-{{- $_ := ".vsphere.password should be set" .Values.vsphere.password -}}
-{{- $_ := ".vsphere.thumbprint should be set" .Values.vsphere.thumbprint -}}
-{{- $_ := ".controlPlane.resourcePool should be set" .Values.controlPlane.resourcePool -}}
-{{- $_ := ".controlPlane.datastore should be set" .Values.controlPlane.datastore -}}
-{{- $_ := ".controlPlane.template should be set" .Values.controlPlane.template -}}
-{{- $_ := ".worker.resourcePool should be set" .Values.worker.resourcePool -}}
-{{- $_ := ".worker.datastore should be set" .Values.worker.datastore -}}
-{{- $_ := ".worker.template should be set" .Values.worker.template -}}
+{{- $_ := required ".clusterName should be set" .Values.clusterName -}}
+{{- $_ := required ".endpointIP should be set" .Values.endpointIP -}}
+{{- $_ := required ".version should be set" .Values.version -}}
+{{- $_ := required ".vsphere.server should be set" .Values.vsphere.server -}}
+{{- $_ := required ".vsphere.username should be set" .Values.vsphere.username -}}
+{{- $_ := required ".vsphere.password should be set" .Values.vsphere.password -}}
+{{- $_ := required ".vsphere.thumbprint should be set" .Values.vsphere.thumbprint -}}
+{{- $_ := required ".controlPlane.resourcePool should be set" .Values.controlPlane.resourcePool -}}
+{{- $_ := required ".controlPlane.datastore should be set" .Values.controlPlane.datastore -}}
+{{- $_ := required ".controlPlane.template should be set" .Values.controlPlane.template -}}
+{{- $_ := required ".worker.resourcePool should be set" .Values.worker.resourcePool -}}
+{{- $_ := required ".worker.datastore should be set" .Values.worker.datastore -}}
+{{- $_ := required ".worker.template should be set" .Values.worker.template -}}
 ---
 apiVersion: cluster.x-k8s.io/v1beta1
 kind: Cluster
