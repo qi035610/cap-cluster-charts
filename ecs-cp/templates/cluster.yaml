@@ -56,7 +56,7 @@ metadata:
 spec:
   template:
     spec:
-      {{ omit .Values.controlPlane "replicas" | toYaml }}
+      {{ omit .Values.controlPlane "replicas" | toYaml | nindent 6 }}
       thumbprint: {{ .Values.vsphere.thumbprint }}
 ---
 apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
@@ -66,7 +66,7 @@ metadata:
 spec:
   template:
     spec:
-      {{ omit .Values.worker "replicas" | toYaml  }}
+      {{ omit .Values.worker "replicas" | toYaml | nindent 6 }}
       thumbprint: {{ .Values.vsphere.thumbprint }}
 ---
 apiVersion: controlplane.cluster.x-k8s.io/v1beta1
