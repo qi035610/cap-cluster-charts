@@ -1,0 +1,312 @@
+{{/*
+List all required inputs in values.yaml
+*/}}
+{{- $_ := required ".clusterName should be set" .Values.clusterName -}}
+{{- $_ := required ".endpointIP should be set" .Values.endpointIP -}}
+{{- $_ := required ".version should be set" .Values.version -}}
+{{- $_ := required ".vsphere.server should be set" .Values.vsphere.server -}}
+{{- $_ := required ".vsphere.username should be set" .Values.vsphere.username -}}
+{{- $_ := required ".vsphere.password should be set" .Values.vsphere.password -}}
+{{- $_ := required ".vsphere.thumbprint should be set" .Values.vsphere.thumbprint -}}
+{{- $_ := required ".controlPlane.resourcePool should be set" .Values.controlPlane.resourcePool -}}
+{{- $_ := required ".controlPlane.datastore should be set" .Values.controlPlane.datastore -}}
+{{- $_ := required ".controlPlane.template should be set" .Values.controlPlane.template -}}
+{{ - range .Values.workers - }}
+{{ - if .replicas - }}
+{{- $_ := required ".resourcePool should be set" .resourcePool -}}
+{{- $_ := required ".datastore should be set" .datastore -}}
+{{- $_ := required ".template should be set" .template -}}
+{{ - end - }}
+{{ - end - }}
+---
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: Cluster
+metadata:
+  labels:
+    cluster.x-k8s.io/cluster-name: {{ .Values.clusterName }}
+  name: {{ .Values.clusterName }}
+spec:
+  clusterNetwork:
+    pods:
+      cidrBlocks:
+      - 192.168.0.0/16
+  controlPlaneRef:
+    apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+    kind: KubeadmControlPlane
+    name: {{ .Values.clusterName }}
+  infrastructureRef:
+    apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+    kind: VSphereCluster
+    name: {{ .Values.clusterName }}
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+kind: VSphereCluster
+metadata:
+  name: {{ .Values.clusterName }}
+spec:
+  controlPlaneEndpoint:
+    host: {{ .Values.endpointIP }}
+    port: 6443
+  identityRef:
+    kind: Secret
+    name: {{ .Values.clusterName }}
+  server: {{ .Values.vsphere.server }}
+  thumbprint: {{ .Values.vsphere.thumbprint }}
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+kind: VSphereMachineTemplate
+metadata:
+  name: {{ .Values.clusterName }}-{{ .Values.version }}
+spec:
+  template:
+    spec:
+      {{ omit .Values.controlPlane "replicas" | toYaml | nindent 6 }}
+      thumbprint: {{ .Values.vsphere.thumbprint }}
+---
+apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+kind: KubeadmControlPlane
+metadata:
+  name: {{ .Values.clusterName }}
+spec:
+  kubeadmConfigSpec:
+    clusterConfiguration:
+      apiServer:
+        extraArgs:
+          cloud-provider: external
+      controllerManager:
+        extraArgs:
+          cloud-provider: external
+    files:
+    - content: |
+        apiVersion: v1
+        kind: Pod
+        metadata:
+          creationTimestamp: null
+          name: kube-vip
+          namespace: kube-system
+        spec:
+          containers:
+          - args:
+            - manager
+            env:
+            - name: vip_arp
+              value: "true"
+            - name: port
+              value: "6443"
+            - name: vip_interface
+              value: eth0
+            - name: vip_cidr
+              value: "32"
+            - name: cp_enable
+              value: "true"
+            - name: cp_namespace
+              value: kube-system
+            - name: vip_ddns
+              value: "false"
+            - name: svc_enable
+              value: "true"
+            - name: svc_leasename
+              value: plndr-svcs-lock
+            - name: svc_election
+              value: "true"
+            - name: vip_leaderelection
+              value: "true"
+            - name: vip_leasename
+              value: plndr-cp-lock
+            - name: vip_leaseduration
+              value: "15"
+            - name: vip_renewdeadline
+              value: "10"
+            - name: vip_retryperiod
+              value: "2"
+            - name: address
+              value: {{ .Values.endpointIP }}
+            - name: prometheus_server
+              value: :2112
+            image: ghcr.io/kube-vip/kube-vip:v0.6.4
+            imagePullPolicy: IfNotPresent
+            name: kube-vip
+            resources: {}
+            securityContext:
+              capabilities:
+                add:
+                - NET_ADMIN
+                - NET_RAW
+            volumeMounts:
+            - mountPath: /etc/kubernetes/admin.conf
+              name: kubeconfig
+            - mountPath: /etc/hosts
+              name: etchosts
+          hostNetwork: true
+          volumes:
+          - hostPath:
+              path: /etc/kubernetes/admin.conf
+            name: kubeconfig
+          - hostPath:
+              path: /etc/kube-vip.hosts
+              type: File
+            name: etchosts
+        status: {}
+      owner: root:root
+      path: /etc/kubernetes/manifests/kube-vip.yaml
+      permissions: "0644"
+    - content: 127.0.0.1 localhost kubernetes
+      owner: root:root
+      path: /etc/kube-vip.hosts
+      permissions: "0644"
+    - content: |
+        #!/bin/bash
+
+        # Copyright 2020 The Kubernetes Authors.
+        #
+        # Licensed under the Apache License, Version 2.0 (the "License");
+        # you may not use this file except in compliance with the License.
+        # You may obtain a copy of the License at
+        #
+        #     http://www.apache.org/licenses/LICENSE-2.0
+        #
+        # Unless required by applicable law or agreed to in writing, software
+        # distributed under the License is distributed on an "AS IS" BASIS,
+        # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+        # See the License for the specific language governing permissions and
+        # limitations under the License.
+
+        set -e
+
+        # Configure the workaround required for kubeadm init with kube-vip:
+        # xref: https://github.com/kube-vip/kube-vip/issues/684
+
+        # Nothing to do for kubernetes < v1.29
+        KUBEADM_MINOR="$(kubeadm version -o short | cut -d '.' -f 2)"
+        if [[ "$KUBEADM_MINOR" -lt "29" ]]; then
+          exit 0
+        fi
+
+        IS_KUBEADM_INIT="false"
+
+        # cloud-init kubeadm init
+        if [[ -f /run/kubeadm/kubeadm.yaml ]]; then
+          IS_KUBEADM_INIT="true"
+        fi
+
+        # ignition kubeadm init
+        if [[ -f /etc/kubeadm.sh ]] && grep -q -e "kubeadm init" /etc/kubeadm.sh; then
+          IS_KUBEADM_INIT="true"
+        fi
+
+        if [[ "$IS_KUBEADM_INIT" == "true" ]]; then
+          sed -i 's#path: /etc/kubernetes/admin.conf#path: /etc/kubernetes/super-admin.conf#' \
+            /etc/kubernetes/manifests/kube-vip.yaml
+        fi
+      owner: root:root
+      path: /etc/pre-kubeadm-commands/50-kube-vip-prepare.sh
+      permissions: "0700"
+    initConfiguration:
+      nodeRegistration:
+        criSocket: /var/run/containerd/containerd.sock
+        kubeletExtraArgs:
+          cloud-provider: external
+        name: {{` '{{ local_hostname }}' `}}
+    joinConfiguration:
+      nodeRegistration:
+        criSocket: /var/run/containerd/containerd.sock
+        kubeletExtraArgs:
+          cloud-provider: external
+        name: {{` '{{ local_hostname }}' `}}
+    preKubeadmCommands:
+    - hostnamectl set-hostname {{` "{{ ds.meta_data.hostname }}" `}}
+    - echo "::1         ipv6-localhost ipv6-loopback localhost6 localhost6.localdomain6"
+      >/etc/hosts
+    - echo "127.0.0.1  {{` {{ ds.meta_data.hostname }} {{ local_hostname }} `}} localhost
+      localhost.localdomain localhost4 localhost4.localdomain4" >>/etc/hosts
+    - mkdir -p /etc/pre-kubeadm-commands
+    - for script in $(find /etc/pre-kubeadm-commands/ -name '*.sh' -type f | sort);
+      do echo "Running script $script"; "$script"; done
+    users:
+    - name: capv
+      sshAuthorizedKeys: {{ .Values.cloudInit.sshAuthorizedKeys }}
+      sudo: ALL=(ALL) NOPASSWD:ALL
+  machineTemplate:
+    infrastructureRef:
+      apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+      kind: VSphereMachineTemplate
+      name: {{ .Values.clusterName }}-{{ .Values.version }}
+  replicas: {{ .Values.controlPlane.replicas }}
+  version: {{ .Values.version }}
+{{ - range .Values.workers - }}
+{{ $index := 0 }}
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+kind: VSphereMachineTemplate
+metadata:
+  name: {{ .Values.clusterName }}-worker-{{ $index }}-{{ .Values.version }}
+spec:
+  template:
+    spec:
+      {{ omit . "replicas" | toYaml | nindent 6 }}
+      thumbprint: {{ .Values.vsphere.thumbprint }}
+---
+apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
+kind: KubeadmConfigTemplate
+metadata:
+  name: {{ .Values.clusterName }}-md-{{ $index }}
+spec:
+  template:
+    spec:
+      joinConfiguration:
+        nodeRegistration:
+          criSocket: /var/run/containerd/containerd.sock
+          kubeletExtraArgs:
+            cloud-provider: external
+          name: {{` '{{ local_hostname }}' `}}
+      preKubeadmCommands:
+      - hostnamectl set-hostname {{` "{{ ds.meta_data.hostname }}" `}}
+      - echo "::1         ipv6-localhost ipv6-loopback localhost6 localhost6.localdomain6"
+        >/etc/hosts
+      - echo "127.0.0.1   {{` {{ ds.meta_data.hostname }} {{ local_hostname }} `}} localhost
+        localhost.localdomain localhost4 localhost4.localdomain4" >>/etc/hosts
+      - mkdir -p /etc/pre-kubeadm-commands
+      - for script in $(find /etc/pre-kubeadm-commands/ -name '*.sh' -type f | sort);
+        do echo "Running script $script"; "$script"; done
+      users:
+      - name: capv
+        sshAuthorizedKeys: {{ .Values.cloudInit.sshAuthorizedKeys }}
+        sudo: ALL=(ALL) NOPASSWD:ALL
+---
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: MachineDeployment
+metadata:
+  labels:
+    cluster.x-k8s.io/cluster-name: {{ .Values.clusterName }}
+  name: {{ .Values.clusterName }}-md-{{ $index }}
+spec:
+  clusterName: {{ .Values.clusterName }}
+  replicas: {{ .replicas }}
+  selector:
+    matchLabels: {}
+  template:
+    metadata:
+      labels:
+        cluster.x-k8s.io/cluster-name: {{ .Values.clusterName }}
+    spec:
+      bootstrap:
+        configRef:
+          apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
+          kind: KubeadmConfigTemplate
+          name: {{ .Values.clusterName }}-md-{{ $index }}
+      clusterName: {{ .Values.clusterName }}
+      infrastructureRef:
+        apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+        kind: VSphereMachineTemplate
+        name: {{ .Values.clusterName }}-worker-{{ $index }}-{{ .Values.version }}
+      version: {{ .Values.version }}
+{{ $index = add $index 1 }}
+{{ - end - }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ .Values.clusterName }}
+stringData:
+  password: {{ .Values.vsphere.password }}
+  username: {{ .Values.vsphere.username }}
