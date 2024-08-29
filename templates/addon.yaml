@@ -38,15 +38,17 @@ stringData:
     stringData:
       csi-vsphere.conf: |+
         [Global]
-        thumbprint = {{ .Values.vsphere.thumbprint | quote }}
+        thumbprint = {{ .Values.vsphere.thumbprint }}
 
-        [VirtualCenter {{ .Values.vsphere.server | quote }}]
-        user = {{ .Values.vsphere.username | quote }}
-        password = {{ .Values.vsphere.password | quote }}
-        datacenters = {{ .Values.controlPlane.datacenter | quote }}
+        [VirtualCenter {{ .Values.vsphere.server }}]
+        user = {{ .Values.vsphere.username }}
+        password = {{ .Values.vsphere.password }}
+        datacenters = {{ .Values.controlPlane.datacenter }}
 
         [Network]
-        public-network = {{ .Values.controlPlane.network.devices[0].networkName | quote }}
+        {{- with (index .Values.controlPlane.network.devices 0) }}
+        public-network = {{ .networkName }}
+        {{- end }}
 
     type: Opaque
 type: addons.cluster.x-k8s.io/resource-set
