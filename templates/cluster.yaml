@@ -11,13 +11,13 @@ List all required inputs in values.yaml
 {{- $_ := required ".controlPlane.resourcePool should be set" .Values.controlPlane.resourcePool -}}
 {{- $_ := required ".controlPlane.datastore should be set" .Values.controlPlane.datastore -}}
 {{- $_ := required ".controlPlane.template should be set" .Values.controlPlane.template -}}
-{{ - range .Values.workers - }}
-{{ - if .replicas - }}
+{{- range .Values.workers }}
+{{- if .replicas -}}
 {{- $_ := required ".resourcePool should be set" .resourcePool -}}
 {{- $_ := required ".datastore should be set" .datastore -}}
 {{- $_ := required ".template should be set" .template -}}
-{{ - end - }}
-{{ - end - }}
+{{- end -}}
+{{- end }}
 ---
 apiVersion: cluster.x-k8s.io/v1beta1
 kind: Cluster
@@ -233,23 +233,23 @@ spec:
       name: {{ .Values.clusterName }}-{{ .Values.version }}
   replicas: {{ .Values.controlPlane.replicas }}
   version: {{ .Values.version }}
-{{ - range .Values.workers - }}
+{{- range .Values.workers -}}
 {{ $index := 0 }}
 ---
 apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
 kind: VSphereMachineTemplate
 metadata:
-  name: {{ .Values.clusterName }}-worker-{{ $index }}-{{ .Values.version }}
+  name: {{ $.Values.clusterName }}-worker-{{ $index }}-{{ $.Values.version }}
 spec:
   template:
     spec:
       {{ omit . "replicas" | toYaml | nindent 6 }}
-      thumbprint: {{ .Values.vsphere.thumbprint }}
+      thumbprint: {{ $.Values.vsphere.thumbprint }}
 ---
 apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
 kind: KubeadmConfigTemplate
 metadata:
-  name: {{ .Values.clusterName }}-md-{{ $index }}
+  name: {{ $.Values.clusterName }}-md-{{ $index }}
 spec:
   template:
     spec:
@@ -270,38 +270,38 @@ spec:
         do echo "Running script $script"; "$script"; done
       users:
       - name: capv
-        sshAuthorizedKeys: {{ .Values.cloudInit.sshAuthorizedKeys }}
+        sshAuthorizedKeys: {{ $.Values.cloudInit.sshAuthorizedKeys }}
         sudo: ALL=(ALL) NOPASSWD:ALL
 ---
 apiVersion: cluster.x-k8s.io/v1beta1
 kind: MachineDeployment
 metadata:
   labels:
-    cluster.x-k8s.io/cluster-name: {{ .Values.clusterName }}
-  name: {{ .Values.clusterName }}-md-{{ $index }}
+    cluster.x-k8s.io/cluster-name: {{ $.Values.clusterName }}
+  name: {{ $.Values.clusterName }}-md-{{ $index }}
 spec:
-  clusterName: {{ .Values.clusterName }}
+  clusterName: {{ $.Values.clusterName }}
   replicas: {{ .replicas }}
   selector:
     matchLabels: {}
   template:
     metadata:
       labels:
-        cluster.x-k8s.io/cluster-name: {{ .Values.clusterName }}
+        cluster.x-k8s.io/cluster-name: {{ $.Values.clusterName }}
     spec:
       bootstrap:
         configRef:
           apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
           kind: KubeadmConfigTemplate
-          name: {{ .Values.clusterName }}-md-{{ $index }}
-      clusterName: {{ .Values.clusterName }}
+          name: {{ $.Values.clusterName }}-md-{{ $index }}
+      clusterName: {{ $.Values.clusterName }}
       infrastructureRef:
         apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
         kind: VSphereMachineTemplate
-        name: {{ .Values.clusterName }}-worker-{{ $index }}-{{ .Values.version }}
-      version: {{ .Values.version }}
+        name: {{ $.Values.clusterName }}-worker-{{ $index }}-{{ $.Values.version }}
+      version: {{ $.Values.version }}
 {{ $index = add $index 1 }}
-{{ - end - }}
+{{- end -}}
 ---
 apiVersion: v1
 kind: Secret

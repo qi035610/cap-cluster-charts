@@ -24,6 +24,7 @@ controlPlane:
   resourcePool: 
   template: 
   datastore: 
+
 workers:
 - replicas: 1
   numCPUs: 4   # cores
