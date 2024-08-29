@@ -38,16 +38,16 @@ stringData:
     stringData:
       csi-vsphere.conf: |+
         [Global]
-        thumbprint = {{ .Values.vsphere.thumbprint }}
+        thumbprint = {{ .Values.vsphere.thumbprint | quote }}
 
-        [VirtualCenter {{ .Values.vsphere.server }}]
-        user = {{ .Values.vsphere.username }}
-        password = {{ .Values.vsphere.password }}
-        datacenters = {{ .Values.controlPlane.datacenter }}
+        [VirtualCenter {{ .Values.vsphere.server | quote }}]
+        user = {{ .Values.vsphere.username | quote }}
+        password = {{ .Values.vsphere.password | quote }}
+        datacenters = {{ .Values.controlPlane.datacenter | quote }}
 
         [Network]
         {{- with (index .Values.controlPlane.network.devices 0) }}
-        public-network = {{ .networkName }}
+        public-network = {{ .networkName | quote }}
         {{- end }}
 
     type: Opaque
