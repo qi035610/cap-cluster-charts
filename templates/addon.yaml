@@ -21,6 +21,8 @@ spec:
     name: cpi-manifests
   - kind: ConfigMap
     name: calico-manifests
+  - kind: ConfigMap
+    name: monitor-manifests
   strategy: Reconcile #Reconcile
 ---
 apiVersion: v1
