@@ -1144,7 +1144,7 @@ data:
         vcenter:
           {{ .Values.vsphere.server }}:
             datacenters:
-            - 'Datacenter'
+            - '{{ .Values.controlPlane.datacenter }}'
             server: '{{ .Values.vsphere.server }}'
     kind: ConfigMap
     metadata:
