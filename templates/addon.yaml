@@ -5960,7 +5960,7 @@ data:
                 # chosen from this range. Changing this value after installation will have
                 # no effect. This should fall within `--cluster-cidr`.
                 # - name: CALICO_IPV4POOL_CIDR
-                #   value: "192.168.0.0/16"
+                #   value: "100.96.0.0/11"
                 # Disable file logging so `kubectl logs` works.
                 - name: CALICO_DISABLE_FILE_LOGGING
                   value: "true"
