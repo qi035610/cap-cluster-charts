@@ -52,5 +52,8 @@ vsphere:
   password:
   thumbprint: 
 
+monitor:
+  rewriteUrl: http://10.221.51.170:30392/api/v1/write
+
 nameOverride: ""
 fullnameOverride: ""

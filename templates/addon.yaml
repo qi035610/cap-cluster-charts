@@ -6161,3 +6161,127 @@ stringData:
       {{ .Values.vsphere.server }}.username: {{ .Values.vsphere.username }}
     type: Opaque
 type: addons.cluster.x-k8s.io/resource-set
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: monitor-manifests
+  namespace: 
+data:
+  data: |
+    ---
+    apiVersion: v1
+    kind: Namespace
+    metadata:
+      name: ecs-system
+    spec: {}
+    ---
+    apiVersion: v1
+    kind: ServiceAccount
+    metadata:
+      name: telegraf-user
+      namespace: ecs-system
+    ---
+    apiVersion: rbac.authorization.k8s.io/v1
+    kind: ClusterRoleBinding
+    metadata:
+      name: telegraf-user
+    roleRef:
+      apiGroup: rbac.authorization.k8s.io
+      kind: ClusterRole
+      name: cluster-admin
+    subjects:
+      - kind: ServiceAccount
+        name: telegraf-user
+        namespace: ecs-system
+    ---
+    apiVersion: apps/v1
+    kind: DaemonSet
+    metadata:
+      name: telegraf-k8s
+      namespace: ecs-system
+      labels:
+        app: telegraf-k8s
+    spec:
+      selector:
+        matchLabels:
+          app: telegraf-k8s
+      template:
+        metadata:
+          labels:
+            app: telegraf-k8s
+            version: v1.0
+        spec:
+          serviceAccountName: telegraf-user
+          containers:
+          - name: telegraf-k8s-container
+            image: harbor01.eng.vmware.com/simulator/telegraf:1.29.5
+            resources:
+              requests:
+                memory: 100Mi
+                cpu: 100m
+              limits:
+                cpu: 100m
+                memory: 150Mi
+            volumeMounts:
+            - name: telegraf-d
+              mountPath: /etc/telegraf
+            env:
+            - name: NODE_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.hostIP
+          terminationGracePeriodSeconds: 30
+          volumes:
+          - name: telegraf-d
+            projected:
+              sources:
+              - configMap:
+                  name: telegraf-k8s-config
+    ---
+    apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: telegraf-k8s-config
+      namespace: ecs-system
+    data:
+      telegraf.conf: |
+        # Configuration for telegraf agent
+        [global_tags]
+        by_ecs_caas = "$NODE_IP"
+        job = "ecs-system"
+        [agent]
+        interval = "20s"
+        round_interval = true
+        metric_batch_size = 1000
+        metric_buffer_limit = 10000
+        collection_jitter = "2s"
+        flush_interval = "20s"
+        flush_jitter = "2s"
+        precision = ""
+        quiet = false
+        hostname = ""
+        omit_hostname = true
+        #######################################################################
+        #                            OUTPUT PLUGINS                           #
+        #######################################################################
+        # Dumping to a file for troubleshoot
+        [[outputs.file]]
+          ## Files to write to, "stdout" is a specially handled file.
+          files = [ "stdout" ]
+          data_format = "wavefront"
+        [[outputs.http]]
+          ## URL is the address to send metrics to
+          url = "{{ .Values.monitor.rewriteUrl }}"
+          data_format = "prometheusremotewrite"
+          [outputs.http.headers]
+            Content-Type = "application/x-protobuf"
+            Content-Encoding = "snappy"
+            X-Prometheus-Remote-Write-Version = "0.1.2"
+        #######################################################################
+        #                            INPUT PLUGINS                            #
+        #######################################################################
+        [[inputs.kubernetes]]
+        ## URL for the kubelet
+        url = "https://$NODE_IP:10250"
+        insecure_skip_verify = true
