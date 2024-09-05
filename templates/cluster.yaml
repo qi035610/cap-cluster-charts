@@ -247,6 +247,7 @@ spec:
   template:
     spec:
       {{ omit . "replicas" | toYaml | nindent 6 }}
+      server: {{ $.Values.vsphere.server }}
       thumbprint: {{ $.Values.vsphere.thumbprint }}
 ---
 apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
