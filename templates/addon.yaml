@@ -6251,7 +6251,7 @@ data:
         # Configuration for telegraf agent
         [global_tags]
         by_ecs_caas = "$NODE_IP"
-        job = "ecs-system"
+        job = "demo"
         [agent]
         interval = "20s"
         round_interval = true
