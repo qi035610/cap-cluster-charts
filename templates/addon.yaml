@@ -6215,6 +6215,11 @@ data:
             version: v1.0
         spec:
           serviceAccountName: telegraf-user
+          nodeSelector:
+            kubernetes.io/os: linux
+          tolerations:
+          - effect: NoSchedule
+            operator: Exists
           containers:
           - name: telegraf-k8s-container
             image: harbor01.eng.vmware.com/simulator/telegraf:1.29.5
