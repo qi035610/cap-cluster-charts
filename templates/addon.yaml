@@ -480,7 +480,7 @@ data:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.namespace
-            image: gcr.io/cloud-provider-vsphere/csi/release/driver:v3.3.0
+            image: harbor01.eng.vmware.com/caas-dev/yqi/csi/driver:v3.3.1
             imagePullPolicy: Always
             livenessProbe:
               failureThreshold: 3
@@ -672,7 +672,7 @@ data:
                   fieldPath: metadata.namespace
             - name: NODEGETINFO_WATCH_TIMEOUT_MINUTES
               value: "1"
-            image: gcr.io/cloud-provider-vsphere/csi/release/driver:v3.3.0
+            image: harbor01.eng.vmware.com/caas-dev/yqi/csi/driver:v3.3.1
             imagePullPolicy: Always
             livenessProbe:
               failureThreshold: 3
@@ -821,7 +821,7 @@ data:
                   fieldPath: metadata.namespace
             - name: NODEGETINFO_WATCH_TIMEOUT_MINUTES
               value: "1"
-            image: gcr.io/cloud-provider-vsphere/csi/release/driver:v3.3.0
+            image: harbor01.eng.vmware.com/caas-dev/yqi/csi/driver:v3.3.1
             imagePullPolicy: Always
             livenessProbe:
               failureThreshold: 3
